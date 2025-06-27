@@ -27,10 +27,14 @@ jobs:
         shell: bash
         run: |
           export PATH="/c/msys64/mingw64/bin:$PATH"
-          make clean || true
-          make
+          SRC_DIR="."
+          cd $SRC_DIR
 
-      - name: Upload fastboot executable
+          make clean || true
+
+          make CC=x86_64-w64-mingw32-gcc LD=x86_64-w64-mingw32-gcc
+
+      - name: Upload fastboot.exe
         uses: actions/upload-artifact@v4
         with:
           name: fastboot-windows
