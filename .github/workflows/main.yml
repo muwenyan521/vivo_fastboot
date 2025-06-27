@@ -2,9 +2,9 @@ name: Build Windows Fastboot
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build-windows:
@@ -61,7 +61,7 @@ jobs:
         make -f makefile
         
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: fastboot-windows
         path: platform/system/core/fastboot/fastboot.exe
