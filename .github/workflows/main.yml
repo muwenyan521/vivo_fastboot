@@ -1,0 +1,67 @@
+name: Build Windows Fastboot
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-windows:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        path: 'vivo_fastboot'
+
+    - name: Setup MinGW environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+        
+    - name: Prepare source structure
+      run: |
+        mkdir -p platform/system/core
+        mv vivo_fastboot platform/system/core/fastboot
+        
+        # Clone required dependencies
+        git clone https://android.googlesource.com/platform/system/extras platform/system/extras
+        git clone https://android.googlesource.com/platform/external/zlib platform/external/zlib
+        git clone https://android.googlesource.com/platform/external/openssl platform/external/openssl
+        git clone https://android.googlesource.com/platform/external/libselinux platform/external/libselinux
+        
+    - name: Modify Makefile for Windows
+      run: |
+        cd platform/system/core/fastboot
+        
+        # Replace Linux-specific files with Windows versions
+        sed -i 's/usb_linux\.c/usb_windows.c/g' makefile
+        sed -i 's/util_linux\.c/util_windows.c/g' makefile
+        
+        # Update toolchain for Windows
+        sed -i 's/TOOLCHAIN = .*/TOOLCHAIN = x86_64-w64-mingw32-/g' makefile
+        sed -i 's/CC = .*/CC = $(TOOLCHAIN)gcc/g' makefile
+        sed -i 's/LD = .*/LD = $(TOOLCHAIN)gcc/g' makefile
+        
+        # Add Windows libraries
+        echo 'LIBS += -lws2_32 -lsetupapi' >> makefile
+        echo 'LDFLAGS += -static' >> makefile
+        
+        # Fix Windows-specific compilation issues
+        sed -i 's/-DHAVE_FORKEXEC=1//g' makefile
+        sed -i 's/-DHAVE_SYMLINKS//g' makefile
+        sed -i 's/-DHAVE_TERMIO_H//g' makefile
+        sed -i 's/-D_GNU_SOURCE//g' makefile
+        
+    - name: Build Windows executable
+      run: |
+        cd platform/system/core/fastboot
+        make -f makefile
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: fastboot-windows
+        path: platform/system/core/fastboot/fastboot.exe
